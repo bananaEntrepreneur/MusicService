@@ -6,7 +6,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 import asyncio
 
-API_TOKEN = '8162663853:AAHasVnLHU5bkyWVAHlWZxGXNy2uNn-O58w'
+API_TOKEN = '8162663853:AAHasVnLHU5bkyWVAHlWZxGXNy2uNn-O58w'  # Replace with your actual token
 
 logging.basicConfig(level=logging.INFO)
 
@@ -39,13 +39,14 @@ class SearchStates(StatesGroup):
     waiting_for_artist_query = State()
 
 
-# --- Основное меню ---
+# --- Меню ---
 def get_main_menu_markup():
     return types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="Поиск 🔎", callback_data="main_menu_search")],
         [types.InlineKeyboardButton(text="Моя библиотека 📚", callback_data="main_menu_library")],
         [types.InlineKeyboardButton(text="Добавить ➕", callback_data="main_menu_add")],
-        [types.InlineKeyboardButton(text="Аккаунт 👤", callback_data="main_menu_account")]
+        [types.InlineKeyboardButton(text="Аккаунт 👤", callback_data="main_menu_account")],
+        [types.InlineKeyboardButton(text="Рекомендации 🌟", callback_data="main_menu_recommendations")]
     ])
 
 
@@ -54,6 +55,14 @@ def get_search_menu_markup():
         [types.InlineKeyboardButton(text="Поиск треков", callback_data="search_tracks_opt")],
         [types.InlineKeyboardButton(text="Поиск альбомов", callback_data="search_albums_opt")],
         [types.InlineKeyboardButton(text="Поиск исполнителей", callback_data="search_artists_opt")],
+        [types.InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu_back")]
+    ])
+
+
+def get_recommendations_menu_markup():
+    return types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🏆 Топ-10 треков", callback_data="recomm_top_10_tracks")],
+        [types.InlineKeyboardButton(text="🎧 Для вас (по тегам)", callback_data="recomm_user_tags")],
         [types.InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu_back")]
     ])
 
@@ -90,10 +99,10 @@ async def send_welcome(message: types.Message, state: FSMContext):
     )
 
 
-# Регистрация нового пользователя
+# --- Регистрация ---
 @dp.callback_query(lambda c: c.data == 'auth_register_start')
 async def process_register_start(callback_query: types.CallbackQuery, state: FSMContext):
-    if not conn or not cursor:
+    if not conn or not cursor:  #
         await callback_query.message.answer("❌ Ошибка подключения к базе данных. Регистрация невозможна.")
         await callback_query.answer()
         return
@@ -104,29 +113,28 @@ async def process_register_start(callback_query: types.CallbackQuery, state: FSM
 
 @dp.message(AuthStates.waiting_for_email_reg)
 async def process_email_reg(message: types.Message, state: FSMContext):
-    await state.update_data(reg_email=message.text)
+    await state.update_data(reg_email=message.text)  #
     await message.answer("Введите username:")
     await state.set_state(AuthStates.waiting_for_username_reg)
 
 
 @dp.message(AuthStates.waiting_for_username_reg)
 async def process_username_reg(message: types.Message, state: FSMContext):
-    await state.update_data(reg_username=message.text)
-    await message.answer("Придумайте пароль (макс. 32 символа):")
+    await state.update_data(reg_username=message.text)  #
+    await message.answer("Придумайте пароль (макс. 32 символа):")  #
     await state.set_state(AuthStates.waiting_for_password_reg)
 
 
 @dp.message(AuthStates.waiting_for_password_reg)
-async def process_password_reg(message: types.Message, state: FSMContext):
+async def process_password_reg(message: types.Message, state: FSMContext):  #
     if not conn or not cursor:
         await message.reply("❌ Ошибка подключения к базе данных. Регистрация не удалась.")
         await state.clear()
         return
     reg_password = message.text
-    if len(reg_password) > 32:
+    if len(reg_password) > 32:  #
         await message.answer("Пароль слишком длинный. Пожалуйста, введите пароль до 32 символов:")
         return
-
 
     user_data_reg = await state.get_data()
     reg_email = user_data_reg.get('reg_email')
@@ -156,10 +164,10 @@ async def process_password_reg(message: types.Message, state: FSMContext):
         await state.clear()
 
 
-# Вход в аккаунт
+# --- Логин ---
 @dp.callback_query(lambda c: c.data == 'auth_login_start')
 @dp.message(Command("login"))
-async def process_login_start(event: types.Message | types.CallbackQuery, state: FSMContext):
+async def process_login_start(event: types.Message | types.CallbackQuery, state: FSMContext):  #
     if not conn or not cursor:
         msg_target = event.message if isinstance(event, types.CallbackQuery) else event
         await msg_target.answer("❌ Ошибка подключения к базе данных. Вход невозможен.")
@@ -174,14 +182,14 @@ async def process_login_start(event: types.Message | types.CallbackQuery, state:
 
 
 @dp.message(AuthStates.waiting_for_username_login)
-async def process_username_login(message: types.Message, state: FSMContext):
+async def process_username_login(message: types.Message, state: FSMContext):  #
     await state.update_data(login_username=message.text)
     await message.answer("Теперь введите ваш пароль:")
     await state.set_state(AuthStates.waiting_for_password_login)
 
 
 @dp.message(AuthStates.waiting_for_password_login)
-async def process_password_login(message: types.Message, state: FSMContext):
+async def process_password_login(message: types.Message, state: FSMContext):  #
     if not conn or not cursor:
         await message.reply("❌ Ошибка подключения к базе данных. Вход не удался.")
         await state.clear()
@@ -212,21 +220,21 @@ async def process_password_login(message: types.Message, state: FSMContext):
         await state.clear()
 
 
-# --- Main Menu Handlers ---
+# --- Обработчики главного меню ---
 @dp.callback_query(lambda c: c.data == 'main_menu_back')
-async def handle_main_menu_back(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_main_menu_back(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     try:
         await callback_query.message.edit_text("Главное меню:", reply_markup=get_main_menu_markup())
-    except Exception as e:
+    except Exception as e:  #
         logging.warning(f"Failed to edit message for main menu back: {e}")
         await callback_query.message.answer("Главное меню:", reply_markup=get_main_menu_markup())
     await callback_query.answer()
 
 
 @dp.callback_query(lambda c: c.data == 'main_menu_search')
-async def handle_menu_search(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_menu_search(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     await callback_query.message.edit_text("Меню поиска:", reply_markup=get_search_menu_markup())
@@ -234,12 +242,13 @@ async def handle_menu_search(callback_query: types.CallbackQuery, state: FSMCont
 
 
 @dp.callback_query(lambda c: c.data == 'main_menu_library')
-async def handle_menu_library(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_menu_library(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     library_markup = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="Мои плейлисты", callback_data="library_my_playlists")],
         [types.InlineKeyboardButton(text="Понравившиеся треки", callback_data="library_liked_tracks")],
+        [types.InlineKeyboardButton(text="➕ Создать новый плейлист", callback_data="add_menu_playlist_cmd")],  # New
         [types.InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu_back")]
     ])
     await callback_query.message.edit_text("Моя библиотека:", reply_markup=library_markup)
@@ -247,7 +256,7 @@ async def handle_menu_library(callback_query: types.CallbackQuery, state: FSMCon
 
 
 @dp.callback_query(lambda c: c.data == 'main_menu_add')
-async def handle_menu_add(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_menu_add(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     add_markup = types.InlineKeyboardMarkup(inline_keyboard=[
@@ -260,7 +269,7 @@ async def handle_menu_add(callback_query: types.CallbackQuery, state: FSMContext
 
 
 @dp.callback_query(lambda c: c.data == 'main_menu_account')
-async def handle_menu_account(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_menu_account(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     username_db = user_auth_data.get('username_db', 'N/A')
@@ -273,9 +282,17 @@ async def handle_menu_account(callback_query: types.CallbackQuery, state: FSMCon
     await callback_query.answer()
 
 
-# --- Search Sub-Menu and FSM Handlers ---
+@dp.callback_query(lambda c: c.data == 'main_menu_recommendations')
+async def handle_menu_recommendations(callback_query: types.CallbackQuery, state: FSMContext):  #
+    user_auth_data = await ensure_authenticated(callback_query, state)
+    if not user_auth_data: return
+    await callback_query.message.edit_text("Рекомендации:", reply_markup=get_recommendations_menu_markup())
+    await callback_query.answer()
+
+
+# --- Поиск: Подменю и обработчики FSM ---
 @dp.callback_query(lambda c: c.data == 'search_tracks_opt')
-async def handle_search_tracks_opt(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_search_tracks_opt(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     await callback_query.message.edit_text("Введите название трека для поиска:")
@@ -284,32 +301,40 @@ async def handle_search_tracks_opt(callback_query: types.CallbackQuery, state: F
 
 
 @dp.message(SearchStates.waiting_for_track_query)
-async def process_track_search_query(message: types.Message, state: FSMContext):
+async def process_track_search_query(message: types.Message, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(message, state)
     if not user_auth_data:
         await state.clear()
         return
 
     query = message.text
+    results_found = False
     try:
+        # Fetch author_id along with other details
         cursor.execute(
-            """SELECT t.id, t.name, al.title as album_name, au.name as author_name
+            """SELECT t.id, t.name, al.title as album_name, au.name as author_name, al.author_id
                FROM track t
                         LEFT JOIN album al ON t.album_id = al.id
                         LEFT JOIN author au ON al.author_id = au.id
                WHERE t.name ILIKE %s
-                   LIMIT 10""",
+                   LIMIT 5""",  # Limit results for button clarity
             (f'%{query}%',)
         )
         tracks = cursor.fetchall()
         if tracks:
-            response_text = "🎶 Найденные треки:\n" + "\n".join(
-                [f"ID: {tid}. {name} (Альбом: {album if album else 'N/A'}, Исп: {author if author else 'N/A'})"
-                 for tid, name, album, author in tracks]
-            )
+            results_found = True
+            await message.answer("🎶 Найденные треки:")
+            for tid, name, album_name, author_name, author_id_val in tracks:
+                track_text = f"ID: {tid}. {name}\n(Альбом: {album_name if album_name else 'N/A'}, Исп: {author_name if author_name else 'N/A'})"
+                buttons = [types.InlineKeyboardButton(text="👍 Like", callback_data=f"like_track_{tid}")]
+                if author_id_val:
+                    buttons.append(
+                        types.InlineKeyboardButton(text="👤 Автор", callback_data=f"view_author_{author_id_val}"))
+
+                markup = types.InlineKeyboardMarkup(inline_keyboard=[buttons])
+                await message.answer(track_text, reply_markup=markup)
         else:
-            response_text = "❌ Треки с таким названием не найдены."
-        await message.answer(response_text)
+            await message.answer("❌ Треки с таким названием не найдены.")
     except Exception as e:
         logging.error(f"Ошибка поиска треков: {e}")
         await message.answer("❌ Произошла ошибка при поиске треков.")
@@ -319,7 +344,7 @@ async def process_track_search_query(message: types.Message, state: FSMContext):
 
 
 @dp.callback_query(lambda c: c.data == 'search_albums_opt')
-async def handle_search_albums_opt(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_search_albums_opt(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     await callback_query.message.edit_text("Введите название альбома для поиска:")
@@ -328,32 +353,37 @@ async def handle_search_albums_opt(callback_query: types.CallbackQuery, state: F
 
 
 @dp.message(SearchStates.waiting_for_album_query)
-async def process_album_search_query(message: types.Message, state: FSMContext):
+async def process_album_search_query(message: types.Message, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(message, state)
     if not user_auth_data:
         await state.clear()
         return
-
     query = message.text
     try:
         cursor.execute(
-            """SELECT al.id, al.title, au.name as author_name, g.name as genre_name
+            """SELECT al.id, al.title, au.name as author_name, g.name as genre_name, al.author_id
                FROM album al
                         LEFT JOIN author au ON al.author_id = au.id
                         LEFT JOIN genre g ON al.genre_id = g.id
                WHERE al.title ILIKE %s
-                   LIMIT 10""",
+                   LIMIT 5""",
             (f'%{query}%',)
         )
         albums = cursor.fetchall()
         if albums:
-            response_text = "💿 Найденные альбомы:\n" + "\n".join(
-                [f"ID: {aid}. {title} (Исполнитель: {author if author else 'N/A'}, Жанр: {genre if genre else 'N/A'})"
-                 for aid, title, author, genre in albums]
-            )
+            await message.answer("💿 Найденные альбомы:")
+            for aid, title, author_name, genre_name, author_id_val in albums:
+                album_text = f"ID: {aid}. {title}\n(Исполнитель: {author_name if author_name else 'N/A'}, Жанр: {genre_name if genre_name else 'N/A'})"
+                buttons = [types.InlineKeyboardButton(text="👍 Like Альбом", callback_data=f"like_album_{aid}")]
+                if author_id_val:
+                    buttons.append(
+                        types.InlineKeyboardButton(text="👤 К автору", callback_data=f"view_author_{author_id_val}"))
+                buttons.append(
+                    types.InlineKeyboardButton(text="🎼 Треки альбома", callback_data=f"list_tracks_for_album_{aid}"))
+                markup = types.InlineKeyboardMarkup(inline_keyboard=[buttons])
+                await message.answer(album_text, reply_markup=markup)
         else:
-            response_text = "❌ Альбомы с таким названием не найдены."
-        await message.answer(response_text)
+            await message.answer("❌ Альбомы с таким названием не найдены.")
     except Exception as e:
         logging.error(f"Ошибка поиска альбомов: {e}")
         await message.answer("❌ Произошла ошибка при поиске альбомов.")
@@ -363,7 +393,7 @@ async def process_album_search_query(message: types.Message, state: FSMContext):
 
 
 @dp.callback_query(lambda c: c.data == 'search_artists_opt')
-async def handle_search_artists_opt(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_search_artists_opt(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     await callback_query.message.edit_text("Введите имя или часть имени исполнителя для поиска:")
@@ -372,30 +402,34 @@ async def handle_search_artists_opt(callback_query: types.CallbackQuery, state: 
 
 
 @dp.message(SearchStates.waiting_for_artist_query)
-async def process_artist_search_query(message: types.Message, state: FSMContext):
+async def process_artist_search_query(message: types.Message, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(message, state)
     if not user_auth_data:
         await state.clear()
         return
-
     query = message.text
     try:
         cursor.execute(
             """SELECT id, name, auditions, bio
                FROM author
                WHERE name ILIKE %s
-                   LIMIT 10""",
-        (f'%{query}%',)
+                   LIMIT 5""",
+            (f'%{query}%',)
         )
         artists = cursor.fetchall()
         if artists:
-            response_text = "🎤 Найденные исполнители:\n" + "\n\n".join(
-                [f"ID: {aid}. {name}\nПрослушиваний: {auditions if auditions else 0}\nBIO: {bio if bio else 'N/A'}"
-                 for aid, name, auditions, bio in artists]
-            )
+            await message.answer("🎤 Найденные исполнители:")
+            for aid, name, auditions, bio in artists:
+                artist_text = f"ID: {aid}. {name}\nПрослушиваний: {auditions if auditions else 0}\nBIO: {bio if bio else 'N/A'}"
+                buttons = [
+                    types.InlineKeyboardButton(text="👍 Like Исполнителя", callback_data=f"like_author_{aid}"),
+                    types.InlineKeyboardButton(text="🛍️ Мерч", callback_data=f"view_merch_{aid}"),
+                    types.InlineKeyboardButton(text="🎤 Концерты", callback_data=f"view_concerts_{aid}")
+                ]
+                markup = types.InlineKeyboardMarkup(inline_keyboard=[buttons])
+                await message.answer(artist_text, reply_markup=markup)
         else:
-            response_text = "❌ Исполнители с таким именем не найдены."
-        await message.answer(response_text)
+            await message.answer("❌ Исполнители с таким именем не найдены.")
     except Exception as e:
         logging.error(f"Ошибка поиска исполнителей: {e}")
         await message.answer("❌ Произошла ошибка при поиске исполнителей.")
@@ -404,17 +438,143 @@ async def process_artist_search_query(message: types.Message, state: FSMContext)
         await message.answer("Меню поиска:", reply_markup=get_search_menu_markup())
 
 
-# --- Library Sub-menu Handlers ---
-@dp.callback_query(lambda c: c.data == 'library_my_playlists')
-async def handle_library_my_playlists(callback_query: types.CallbackQuery, state: FSMContext):
+# --- Generic Like Handler & View Author Handler ---
+@dp.callback_query(lambda c: c.data.startswith('like_'))
+async def handle_like_entity(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
+    user_id_db = user_auth_data.get('user_id_db')
+
+    try:
+        parts = callback_query.data.split('_')  # like_track_123
+        entity_type = parts[1]
+        entity_id = int(parts[2])
+
+        cursor.execute("SELECT id FROM reactions WHERE type = 'like'")
+        reaction_like_row = cursor.fetchone()
+        if not reaction_like_row:
+            await callback_query.answer("❌ Тип реакции 'like' не найден в системе.", show_alert=True)
+            return
+        reaction_like_id = reaction_like_row[0]
+
+        # Check if already liked to potentially implement "unlike" or prevent duplicate error
+        # For now, we rely on UniqueViolation to indicate it's already liked.
+
+        sql_insert = """INSERT INTO user_reaction (user_id, reaction_id, track_id, album_id, author_id)
+                        VALUES (%s, %s, %s, %s, %s)"""
+        track_id_val, album_id_val, author_id_val = None, None, None
+
+        if entity_type == 'track':
+            track_id_val = entity_id
+            # Verify track exists
+            cursor.execute("SELECT id FROM track WHERE id = %s", (entity_id,))
+            if not cursor.fetchone():
+                await callback_query.answer(f"Трек ID {entity_id} не найден.", show_alert=True)
+                return
+        elif entity_type == 'album':
+            album_id_val = entity_id
+            # Verify album exists
+            cursor.execute("SELECT id FROM album WHERE id = %s", (entity_id,))
+            if not cursor.fetchone():
+                await callback_query.answer(f"Альбом ID {entity_id} не найден.", show_alert=True)
+                return
+        elif entity_type == 'author':
+            author_id_val = entity_id
+            # Verify author exists
+            cursor.execute("SELECT id FROM author WHERE id = %s", (entity_id,))
+            if not cursor.fetchone():
+                await callback_query.answer(f"Автор ID {entity_id} не найден.", show_alert=True)
+                return
+        else:
+            await callback_query.answer("Неизвестный тип для лайка.", show_alert=True)
+            return
+
+        cursor.execute(sql_insert, (user_id_db, reaction_like_id, track_id_val, album_id_val, author_id_val))
+        conn.commit()
+        await callback_query.answer(f"{entity_type.capitalize()} ID {entity_id} понравился!", show_alert=False)
+
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
+        await callback_query.answer("Вы уже лайкнули это.", show_alert=True)
+    except psycopg2.errors.ForeignKeyViolation as fk_error:
+        conn.rollback()
+        logging.error(f"Ошибка внешнего ключа при лайке: {fk_error}")
+        await callback_query.answer("Ошибка данных при попытке лайкнуть.", show_alert=True)
+    except Exception as e:
+        conn.rollback()
+        logging.error(f"Ошибка при лайке сущности: {e}")
+        await callback_query.answer("Произошла ошибка.", show_alert=True)
+
+
+@dp.callback_query(lambda c: c.data.startswith('view_author_'))
+async def handle_view_author(callback_query: types.CallbackQuery, state: FSMContext):  #
+    user_auth_data = await ensure_authenticated(callback_query, state)
+    if not user_auth_data: return
+
+    try:
+        author_id = int(callback_query.data.split('_')[2])
+        cursor.execute("SELECT id, name, auditions, bio FROM author WHERE id = %s", (author_id,))
+        author_data = cursor.fetchone()
+
+        if author_data:
+            aid, name, auditions, bio = author_data
+            text = f"👤 Исполнитель: {name}\nID: {aid}\nПрослушиваний: {auditions if auditions else 0}\nBIO: {bio if bio else 'N/A'}"
+
+            # Placeholder buttons for further actions related to the author
+            author_actions_markup = types.InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    types.InlineKeyboardButton(text="👍 Like Исполнителя", callback_data=f"like_author_{aid}"),
+                    types.InlineKeyboardButton(text="🛍️ Мерч", callback_data=f"view_merch_{aid}"),
+                ],
+                [types.InlineKeyboardButton(text="🎤 Концерты", callback_data=f"view_concerts_{aid}")]
+                # Add a back button if this view replaces a menu
+            ])
+            await callback_query.message.answer(text, reply_markup=author_actions_markup)
+        else:
+            await callback_query.message.answer("Информация об исполнителе не найдена.")
+    except Exception as e:
+        logging.error(f"Ошибка при просмотре автора: {e}")
+        await callback_query.message.answer("Не удалось загрузить информацию об авторе.")
+    await callback_query.answer()
+
+
+# Placeholder handlers for album tracks, merch, concerts - these need full implementation
+@dp.callback_query(lambda c: c.data.startswith('list_tracks_for_album_'))
+async def handle_list_tracks_for_album(callback_query: types.CallbackQuery, state: FSMContext):
+    # TODO: Implement logic to list tracks for the given album_id
+    album_id = callback_query.data.split('_')[-1]
+    await callback_query.message.answer(f"Здесь будут треки для альбома ID {album_id}. (Не реализовано)")
+    await callback_query.answer()
+
+
+@dp.callback_query(lambda c: c.data.startswith('view_merch_'))
+async def handle_view_merch(callback_query: types.CallbackQuery, state: FSMContext):
+    author_id = callback_query.data.split('_')[-1]
+    # TODO: Fetch and display merch for author_id
+    await callback_query.message.answer(f"Здесь будет мерч для исполнителя ID {author_id}. (Не реализовано)")
+    await callback_query.answer()
+
+
+@dp.callback_query(lambda c: c.data.startswith('view_concerts_'))
+async def handle_view_concerts(callback_query: types.CallbackQuery, state: FSMContext):
+    author_id = callback_query.data.split('_')[-1]
+    # TODO: Fetch and display concerts for author_id
+    await callback_query.message.answer(f"Здесь будут концерты для исполнителя ID {author_id}. (Не реализовано)")
+    await callback_query.answer()
+
+
+# --- Обработчики подменю "Библиотека" ---
+@dp.callback_query(lambda c: c.data == 'library_my_playlists')
+async def handle_library_my_playlists(callback_query: types.CallbackQuery, state: FSMContext):  #
+    user_auth_data = await ensure_authenticated(callback_query, state)
+    if not user_auth_data: return
+    # This will send a new message as list_my_playlists is a message handler
     await list_my_playlists(callback_query.message, state)
     await callback_query.answer()
 
 
 @dp.callback_query(lambda c: c.data == 'library_liked_tracks')
-async def handle_library_liked_tracks(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_library_liked_tracks(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     user_id_db = user_auth_data.get('user_id_db')
@@ -428,9 +588,9 @@ async def handle_library_liked_tracks(callback_query: types.CallbackQuery, state
                                 LEFT JOIN author au ON al.author_id = au.id
                        WHERE ur.user_id = %s
                          AND r.type = 'like'
+                         AND ur.track_id IS NOT NULL
                        ORDER BY t.name LIMIT 20
-                       """,
-                       (user_id_db,))
+                       """, (user_id_db,))
         tracks = cursor.fetchall()
         if tracks:
             text = "👍 Понравившиеся треки (до 20):\n" + "\n".join(
@@ -439,16 +599,16 @@ async def handle_library_liked_tracks(callback_query: types.CallbackQuery, state
             )
         else:
             text = "У вас нет понравившихся треков."
-        await callback_query.message.answer(text)
+        await callback_query.message.answer(text)  # Send as new message, not edit
     except Exception as e:
         logging.error(f"Ошибка получения понравившихся треков: {e}")
         await callback_query.message.answer("❌ Ошибка при получении понравившихся треков.")
     await callback_query.answer()
 
 
-# --- Add Sub-menu Handlers ---
+# --- Обработчики подменю "Добавить" ---
 @dp.callback_query(lambda c: c.data == 'add_menu_track_cmd')
-async def handle_add_menu_track_cmd(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_add_menu_track_cmd(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     await callback_query.message.answer(
@@ -458,7 +618,7 @@ async def handle_add_menu_track_cmd(callback_query: types.CallbackQuery, state: 
 
 
 @dp.callback_query(lambda c: c.data == 'add_menu_playlist_cmd')
-async def handle_add_menu_playlist_cmd(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_add_menu_playlist_cmd(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     await callback_query.message.answer("Для создания плейлиста, используйте команду:\n`/create_playlist <название>`",
@@ -466,9 +626,9 @@ async def handle_add_menu_playlist_cmd(callback_query: types.CallbackQuery, stat
     await callback_query.answer()
 
 
-# --- Account Sub-menu Handlers ---
+# --- Обработчики подменю "Аккаунт" ---
 @dp.callback_query(lambda c: c.data == 'account_info_opt')
-async def handle_account_info_opt(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_account_info_opt(callback_query: types.CallbackQuery, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(callback_query, state)
     if not user_auth_data: return
     username_db = user_auth_data.get('username_db', 'N/A')
@@ -487,34 +647,135 @@ async def handle_account_info_opt(callback_query: types.CallbackQuery, state: FS
 
 
 @dp.callback_query(lambda c: c.data == 'account_logout_opt')
-async def handle_account_logout_opt(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_account_logout_opt(callback_query: types.CallbackQuery, state: FSMContext):  #
     await state.clear()
-    await callback_query.message.edit_text("✅ Вы успешно вышли из системы.")
+    try:
+        await callback_query.message.edit_text("✅ Вы успешно вышли из системы.")
+    except:  # If message can't be edited (e.g. too old or no text)
+        await callback_query.message.answer("✅ Вы успешно вышли из системы.")
     await callback_query.answer()
-    await send_welcome(callback_query.message, state) # Optionally show start message
+    # await send_welcome(callback_query.message, state) # Optionally show start message
 
 
-# --- Authenticated Commands ---
+# --- Обработчики подменю "Рекомендации" ---
+@dp.callback_query(lambda c: c.data == 'recomm_top_10_tracks')
+async def handle_recomm_top_10_tracks(callback_query: types.CallbackQuery, state: FSMContext):  #
+    user_auth_data = await ensure_authenticated(callback_query, state)
+    if not user_auth_data: return
+    try:
+        cursor.execute(
+            """SELECT t.id, t.name, t.auditions, al.title as album_name, au.name as author_name
+               FROM track t
+                        LEFT JOIN album al ON t.album_id = al.id
+                        LEFT JOIN author au ON al.author_id = au.id
+               ORDER BY t.auditions DESC NULLS LAST LIMIT 10"""
+        )
+        tracks = cursor.fetchall()
+        if tracks:
+            response_text = "🏆 Топ-10 треков по прослушиваниям:\n\n"
+            for tid, name, auditions, album_name, author_name in tracks:
+                response_text += (
+                    f"🎵 {name} (ID: {tid})\n"
+                    f"   Альбом: {album_name if album_name else 'N/A'}, Исп: {author_name if author_name else 'N/A'}\n"
+                    f"   Прослушиваний: {auditions if auditions is not None else 0}\n\n"
+                )
+        else:
+            response_text = "Не удалось получить топ-10 треков."
+        await callback_query.message.answer(response_text)  # send as new message
+    except Exception as e:
+        logging.error(f"Ошибка получения топ-10 треков: {e}")
+        await callback_query.message.answer("❌ Произошла ошибка при получении топ-10 треков.")
+    await callback_query.answer()
+
+
+@dp.callback_query(lambda c: c.data == 'recomm_user_tags')
+async def handle_recomm_user_tags(callback_query: types.CallbackQuery, state: FSMContext):  #
+    user_auth_data = await ensure_authenticated(callback_query, state)
+    if not user_auth_data: return
+    user_id_db = user_auth_data.get('user_id_db')
+
+    try:
+        # 1. Get tags of tracks liked by the user
+        cursor.execute(
+            """SELECT DISTINCT tt.tag_id
+               FROM user_reaction ur
+                        JOIN reactions react ON ur.reaction_id = react.id
+                        JOIN track t ON ur.track_id = t.id
+                        JOIN track_tag tt ON t.id = tt.track_id
+               WHERE ur.user_id = %s
+                 AND react.type = 'like'
+                 AND ur.track_id IS NOT NULL""",
+            (user_id_db,)
+        )
+        liked_tags_rows = cursor.fetchall()
+        if not liked_tags_rows:
+            await callback_query.message.answer(
+                "Не найдено понравившихся треков с тегами для создания рекомендаций. Полайкайте больше треков!")
+            await callback_query.answer()
+            return
+
+        liked_tag_ids = [row[0] for row in liked_tags_rows]
+
+        # 2. Find other tracks with these tags, not liked by user
+        cursor.execute(
+            """SELECT t.id,
+                      t.name,
+                      COUNT(DISTINCT tt.tag_id) as matching_tags,
+                      t.auditions,
+                      al.title                  as album_name,
+                      au.name                   as author_name
+               FROM track t
+                        JOIN track_tag tt ON t.id = tt.track_id
+                        LEFT JOIN album al ON t.album_id = al.id
+                        LEFT JOIN author au ON al.author_id = au.id
+               WHERE tt.tag_id = ANY (%s)
+                 AND t.id NOT IN (SELECT ur_liked.track_id
+                                  FROM user_reaction ur_liked
+                                           JOIN reactions react_liked ON ur_liked.reaction_id = react_liked.id
+                                  WHERE ur_liked.user_id = %s
+                                    AND react_liked.type = 'like'
+                                    AND ur_liked.track_id IS NOT NULL)
+               GROUP BY t.id, t.name, t.auditions, al.title, au.name
+               ORDER BY matching_tags DESC, t.auditions DESC NULLS LAST LIMIT 5""",
+            (liked_tag_ids, user_id_db)
+        )
+        recommended_tracks = cursor.fetchall()
+
+        if recommended_tracks:
+            response_text = "🎧 Рекомендованные треки на основе ваших предпочтений (по тегам):\n\n"
+            for tid, name, matching_tags, auditions, album_name, author_name in recommended_tracks:
+                response_text += (
+                    f"🎵 {name} (ID: {tid})\n"
+                    f"   Альбом: {album_name if album_name else 'N/A'}, Исп: {author_name if author_name else 'N/A'}\n"
+                    f"   Совпадающих тегов: {matching_tags}, Прослушиваний: {auditions if auditions is not None else 0}\n\n"
+                )
+        else:
+            response_text = "Не удалось подобрать персональные рекомендации. Возможно, стоит расширить список понравившихся треков."
+        await callback_query.message.answer(response_text)
+    except Exception as e:
+        logging.error(f"Ошибка получения персональных рекомендаций: {e}")
+        await callback_query.message.answer("❌ Произошла ошибка при подборе рекомендаций.")
+    await callback_query.answer()
+
+
+# --- Существующие команды (адаптированы или проверены) ---
 @dp.message(Command("logout"))
-async def process_logout_cmd(message: types.Message, state: FSMContext):
+async def process_logout_cmd(message: types.Message, state: FSMContext):  #
     await state.clear()
     await message.reply("✅ Вы успешно вышли из системы.")
     await send_welcome(message, state)
 
 
 @dp.message(Command("create_playlist"))
-async def create_playlist_cmd(message: types.Message, state: FSMContext):
+async def create_playlist_cmd(message: types.Message, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(message, state)
-    if not user_auth_data:
-        return
-
+    if not user_auth_data: return
     user_id_db = user_auth_data.get('user_id_db')
     args = message.get_args()
     if not args:
         await message.reply("❌ Пожалуйста, укажите название плейлиста: /create_playlist <название>")
         return
     title = args
-
     try:
         cursor.execute(
             "INSERT INTO playlist (title, cover, user_id) VALUES (%s, %s, %s) RETURNING id",
@@ -530,11 +791,9 @@ async def create_playlist_cmd(message: types.Message, state: FSMContext):
 
 
 @dp.message(Command("my_playlists"))
-async def list_my_playlists(message: types.Message, state: FSMContext):
+async def list_my_playlists(message: types.Message, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(message, state)
-    if not user_auth_data:
-        return
-
+    if not user_auth_data: return
     user_id_db = user_auth_data.get('user_id_db')
     try:
         cursor.execute("SELECT id, title FROM playlist WHERE user_id = %s ORDER BY title", (user_id_db,))
@@ -550,40 +809,25 @@ async def list_my_playlists(message: types.Message, state: FSMContext):
 
 
 @dp.message(Command("add_track"))
-async def add_track_cmd(message: types.Message, state: FSMContext):
+async def add_track_cmd(message: types.Message, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(message, state)
-    if not user_auth_data:
-        return
+    if not user_auth_data: return
     args = message.text.split(maxsplit=5)
     if len(args) < 5:
         await message.reply("❌ Использование: /add_track <название> <album_id> <playlist_id> <tag_id> [mp3_ссылка]")
         return
-
     _, name, album_id_str, playlist_id_str, tag_id_str = args[:5]
     mp3_link = args[5] if len(args) > 5 else ''
-
     if not (album_id_str.isdigit() and playlist_id_str.isdigit() and tag_id_str.isdigit()):
         await message.reply("❌ ID альбома, плейлиста и тега должны быть числами.")
         return
-
-    album_id = int(album_id_str)
-    playlist_id = int(playlist_id_str)
-    tag_id = int(tag_id_str)
-
-    try:
-        cursor.execute("SELECT id FROM album WHERE id = %s", (album_id,))
-        if not cursor.fetchone():
-            await message.reply(f"❌ Альбом с ID {album_id} не найден.")
-            return
-        cursor.execute("SELECT id FROM playlist WHERE id = %s", (playlist_id,))
-        if not cursor.fetchone():
-            await message.reply(f"❌ Плейлист с ID {playlist_id} не найден (для первичной привязки трека).")
-            return
-        cursor.execute("SELECT id FROM tag WHERE id = %s", (tag_id,))
-        if not cursor.fetchone():
-            await message.reply(f"❌ Тег с ID {tag_id} не найден (для первичной привязки трека).")
-            return
-
+    album_id, playlist_id, tag_id = int(album_id_str), int(playlist_id_str), int(tag_id_str)
+    try:  # Basic FK checks
+        for table, entity_id_val in [("album", album_id), ("playlist", playlist_id), ("tag", tag_id)]:
+            cursor.execute(f"SELECT id FROM \"{table}\" WHERE id = %s", (entity_id_val,))
+            if not cursor.fetchone():
+                await message.reply(f"❌ Сущность {table} с ID {entity_id_val} не найдена.")
+                return
         cursor.execute(
             """INSERT INTO track ("name", auditions, mp3, playlist_id, tag_id, album_id)
                VALUES (%s, 0, %s, %s, %s, %s) RETURNING id""",
@@ -595,45 +839,30 @@ async def add_track_cmd(message: types.Message, state: FSMContext):
     except Exception as e:
         conn.rollback()
         logging.error(f"Ошибка добавления трека: {e}")
-        await message.reply(f"❌ Ошибка при добавлении трека. {e}")
+        await message.reply(f"❌ Ошибка при добавлении трека: {e}")
 
 
 @dp.message(Command("add_track_to_playlist"))
-async def add_track_to_playlist_cmd(message: types.Message, state: FSMContext):
+async def add_track_to_playlist_cmd(message: types.Message, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(message, state)
-    if not user_auth_data:
-        return
-
+    if not user_auth_data: return
     user_id_db = user_auth_data.get('user_id_db')
     args = message.get_args().split()
-    if len(args) != 2:
+    if len(args) != 2 or not args[0].isdigit() or not args[1].isdigit():
         await message.reply("❌ Использование: /add_track_to_playlist <playlist_id> <track_id>")
         return
-
-    playlist_id_str, track_id_str = args
-    if not (playlist_id_str.isdigit() and track_id_str.isdigit()):
-        await message.reply("❌ ID плейлиста и трека должны быть числами.")
-        return
-
-    playlist_id = int(playlist_id_str)
-    track_id = int(track_id_str)
-
+    playlist_id, track_id = int(args[0]), int(args[1])
     try:
-        cursor.execute("SELECT id FROM playlist WHERE id = %s AND user_id = %s",
-                       (playlist_id, user_id_db))
+        cursor.execute("SELECT id FROM playlist WHERE id = %s AND user_id = %s", (playlist_id, user_id_db))
         if not cursor.fetchone():
             await message.reply("❌ Плейлист не найден или не принадлежит вам.")
             return
-
         cursor.execute("SELECT id FROM track WHERE id = %s", (track_id,))
         if not cursor.fetchone():
             await message.reply(f"❌ Трек с ID {track_id} не найден.")
             return
-
-        cursor.execute(
-            "INSERT INTO playlist_tracklist (playlist_id, track_id) VALUES (%s, %s)",
-            (playlist_id, track_id)
-        )
+        cursor.execute("INSERT INTO playlist_tracklist (playlist_id, track_id) VALUES (%s, %s)",
+                       (playlist_id, track_id))
         conn.commit()
         await message.reply(f"✅ Трек (ID: {track_id}) добавлен в плейлист (ID: {playlist_id}).")
     except psycopg2.errors.UniqueViolation:
@@ -646,64 +875,42 @@ async def add_track_to_playlist_cmd(message: types.Message, state: FSMContext):
 
 
 @dp.message(Command("like_track"))
-async def like_track_cmd(message: types.Message, state: FSMContext):
+async def like_track_cmd(message: types.Message, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(message, state)
-    if not user_auth_data:
-        return
-
+    if not user_auth_data: return
     user_id_db = user_auth_data.get('user_id_db')
     track_id_str = message.get_args()
-
     if not track_id_str or not track_id_str.isdigit():
-        await message.reply("❌ Использование: /like_track <track_id>")
+        await message.reply("❌ Использование: /like_track <track_id>. Рекомендуется использовать кнопки 👍.")
         return
     track_id = int(track_id_str)
-
-    try:
-        cursor.execute("SELECT id FROM track WHERE id = %s", (track_id,))
-        if not cursor.fetchone():
-            await message.reply(f"❌ Трек с ID {track_id} не найден.")
-            return
-
+    # Re-use generic like logic if possible, or keep specific for command
+    try:  # Simplified version for command
         cursor.execute("SELECT id FROM reactions WHERE type = 'like'")
-        reaction_like_row = cursor.fetchone()
-        if not reaction_like_row:
-            await message.reply(
-                "❌ Тип реакции 'like' не найден в системе.")
-            return
-        reaction_like_id = reaction_like_row[0]
-
-        cursor.execute(
-            """INSERT INTO user_reaction (user_id, reaction_id, track_id, playlist_id, album_id, author_id)
-               VALUES (%s, %s, %s, NULL, NULL, NULL)""",
-            (user_id_db, reaction_like_id, track_id)
-        )
+        reaction_like_id = cursor.fetchone()[0]
+        cursor.execute("INSERT INTO user_reaction (user_id, reaction_id, track_id) VALUES (%s, %s, %s)",
+                       (user_id_db, reaction_like_id, track_id))
         conn.commit()
-        await message.reply(f"❤️ Трек (ID: {track_id}) понравился!")
-    except psycopg2.errors.UniqueViolation:
+        await message.reply(f"❤️ Трек (ID: {track_id}) понравился (через команду)!")
+    except psycopg2.errors.UniqueViolation:  #
         conn.rollback()
-        await message.reply("ℹ️ Вы уже лайкнули этот трек или другая подобная реакция существует.")
-    except psycopg2.errors.ForeignKeyViolation as fk_error:
+        await message.reply("ℹ️ Вы уже лайкнули этот трек.")
+    except Exception as e:  #
         conn.rollback()
-        logging.error(f"Ошибка внешнего ключа при лайке: {fk_error}")
-        await message.reply(f"❌ Ошибка данных при попытке лайкнуть трек.")
-    except Exception as e:
-        conn.rollback()
-        logging.error(f"Ошибка при лайке трека: {e}")
-        await message.reply(f"❌ Ошибка: {e}")
+        logging.error(f"Ошибка лайка трека через команду: {e}")
+        await message.reply("❌ Ошибка при лайке трека.")
 
 
 @dp.message(Command("list_tracks"))
-async def list_tracks_cmd(message: types.Message, state: FSMContext):
+async def list_tracks_cmd(message: types.Message, state: FSMContext):  #
     user_auth_data = await ensure_authenticated(message, state)
-    if not user_auth_data:
-        return
+    if not user_auth_data: return
     try:
         cursor.execute("SELECT id, name, auditions FROM track ORDER BY name LIMIT 20")
         tracks = cursor.fetchall()
         if tracks:
             text = "🎶 Список треков (до 20):\n" + "\n".join(
-                [f"ID: {tid}. {name} (Прослушиваний: {aud}) " for tid, name, aud in tracks])
+                [f"ID: {tid}. {name} (Прослушиваний: {aud if aud is not None else 0}) " for tid, name, aud in tracks])
         else:
             text = "Нет доступных треков."
         await message.reply(text)
@@ -712,13 +919,14 @@ async def list_tracks_cmd(message: types.Message, state: FSMContext):
         await message.reply("❌ Ошибка при получении списка треков.")
 
 
-async def main():
+# --- Запуск бота ---
+async def main():  #
     if not conn or not cursor:
         logging.critical("Не удалось подключиться к базе данных. Запуск бота невозможен.")
         return
-    logging.info("Starting bot polling...")
+    logging.info("Запуск бота...")
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  #
     asyncio.run(main())
