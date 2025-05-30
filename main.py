@@ -1241,7 +1241,7 @@ async def handle_remove_track_from_playlist(callback_query: types.CallbackQuery,
         await callback_query.answer("Произошла ошибка при удалении трека.", show_alert=True)
 
 
-# --- Helper to get library menu (used after some playlist operations) ---
+# --- Меню ---
 async def get_library_menu_markup(state: FSMContext):
     return types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="Мои плейлисты", callback_data="library_my_playlists")],
@@ -1311,10 +1311,9 @@ async def handle_account_logout(callback_query: types.CallbackQuery, state: FSMC
         await callback_query.answer("Выход выполнен")
 
     except Exception as e:
-        logging.error(f"Unexpected error in handle_account_logout: {e}")
-        await state.clear()  # Try to clear state even on error
+        logging.error(f"Непредвиденная ошибка в handle_account_logout: {e}")
+        await state.clear()
         await send_error_message(callback_query, "❌ Произошла ошибка при выходе из системы.")
-        # await callback_query.answer() # Redundant if send_error_message answers
 
 
 # --- Запуск бота ---
@@ -1323,17 +1322,17 @@ async def main():
         logging.critical("Не удалось подключиться к базе данных. Запуск бота невозможен.")
         return
 
-    logging.info("Starting bot polling...")
+    logging.info("Запуск бота...")
     try:
         await dp.start_polling(bot)
     except Exception as e:
-        logging.critical(f"Bot polling failed critically: {e}")
+        logging.critical(f"Критическая ошибка при запуске бота: {e}")
     finally:
         if cursor:
             cursor.close()
         if conn:
             conn.close()
-        logging.info("Database connection closed.")
+        logging.info("Подключение к Базе Данных закрыто.")
 
 
 if __name__ == '__main__':
